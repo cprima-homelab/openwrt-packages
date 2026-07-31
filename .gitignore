@@ -1,0 +1,16 @@
+.DS_Store
+*.swp
+*.tmp
+.idea/
+.vscode/
+
+# OpenWrt SDK and build artifacts
+openwrt-sdk*/
+staging_dir/
+build_dir/
+bin/
+dl/
+*.ipk
+*.apk
+*.tar.gz
+signing.key

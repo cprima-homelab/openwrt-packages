@@ -1,0 +1,57 @@
+name: Build packages
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  build:
+    name: Build ${{ matrix.package }} / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [caddy, salt-agent-ubus]
+        target:
+          - name: armv7
+            sdk_url: https://downloads.openwrt.org/snapshots/targets/ipq806x/generic/openwrt-sdk-ipq806x-generic_gcc-14.2.0_musl_eabi.Linux-x86_64.tar.zst
+          - name: arm64
+            sdk_url: https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache OpenWrt SDK
+        uses: actions/cache@v4
+        with:
+          path: sdk/
+          key: sdk-${{ matrix.target.name }}-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: Download OpenWrt SDK
+        run: |
+          mkdir -p sdk
+          if [ ! -d sdk/staging_dir ]; then
+            curl -L "${{ matrix.target.sdk_url }}" -o sdk.tar.zst
+            tar --zstd -xf sdk.tar.zst --strip-components=1 -C sdk/
+          fi
+
+      - name: Add feed and build
+        run: |
+          echo "src-link cprima-homelab $GITHUB_WORKSPACE" >> sdk/feeds.conf.default
+          cd sdk
+          ./scripts/feeds update cprima-homelab
+          ./scripts/feeds install -p cprima-homelab ${{ matrix.package }}
+          make package/${{ matrix.package }}/compile V=s
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          find sdk/bin -name '*.ipk' -o -name '*.apk' | \
+            xargs -I{} cp {} artifacts/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}-${{ matrix.target.name }}
+          path: artifacts/

@@ -1,0 +1,5 @@
+# /etc/caddy/Caddyfile
+# Minimal default — replace with device-specific configuration.
+:80 {
+	respond "Caddy is running" 200
+}
