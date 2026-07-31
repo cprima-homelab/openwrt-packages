@@ -14,3 +14,7 @@ dl/
 *.apk
 *.tar.gz
 signing.key
+
+# Test harness build outputs (populate from SDK build before running tests)
+dist/*
+!dist/.gitkeep
