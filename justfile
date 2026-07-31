@@ -1,5 +1,15 @@
 set shell := ["pwsh", "-c"]
 
+openwrt_arch := "x86_64"
+caddy_version := "v2.10.2"
+
+# Build Caddy binary for a given OpenWrt architecture (development utility)
+build-caddy arch=openwrt_arch:
+    docker compose -f build/caddy/compose.yaml run --rm `
+        -e OPENWRT_ARCH={{arch}} `
+        -e CADDY_VERSION={{caddy_version}} `
+        build
+
 # Run the full test suite (validate + QEMU smoke test)
 test:
     docker compose run --rm openwrt-test

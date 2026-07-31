@@ -1,0 +1,9 @@
+services:
+  build:
+    build:
+      context: .
+    volumes:
+      - ../../dist/caddy:/out
+    environment:
+      CADDY_VERSION: "v2.10.2"
+      OPENWRT_ARCH: "x86_64"
