@@ -1,0 +1,30 @@
+name: openwrt-packages
+
+services:
+  build:
+    image: ghcr.io/openwrt/sdk:x86_64-openwrt-${OPENWRT_RELEASE:-25.12}
+    command: bash /src/build.sh
+    volumes:
+      - openwrt-sdk-${OPENWRT_RELEASE:-25.12}:/builder
+      - ./build.sh:/src/build.sh:ro
+      - ../../packages:/src/packages:ro
+      - ../../dist/packages/${OPENWRT_RELEASE:-25.12}:/out
+    environment:
+      VERSION_PATH: releases/${OPENWRT_RELEASE_FULL:-25.12.5}
+
+  index:
+    image: ghcr.io/openwrt/sdk:x86_64-openwrt-${OPENWRT_RELEASE:-25.12}
+    command: bash /src/index.sh
+    volumes:
+      - openwrt-sdk-${OPENWRT_RELEASE:-25.12}:/builder:ro
+      - ./index.sh:/src/index.sh:ro
+      - ../../scripts/build-feed-index.sh:/src/build-feed-index.sh:ro
+      - ../../dist/feed:/feed
+    environment:
+      OPENWRT_RELEASE: ${OPENWRT_RELEASE:-25.12}
+      APK_SIGN_KEY: ${APK_SIGN_KEY:-}
+      IPK_SIGN_KEY: ${IPK_SIGN_KEY:-}
+
+volumes:
+  openwrt-sdk-25.12:
+  openwrt-sdk-24.10:

@@ -15,9 +15,17 @@ dl/
 *.tar.gz
 signing.key
 
-# Test harness build outputs (populate from SDK build before running tests)
+# Stage 1 application build output (caddy binaries + SHA256SUMS)
+dist/caddy/
+!dist/caddy/.gitkeep
+
+# Stage 2 OpenWrt package build output
+dist/artifacts/
+
+# Keep dist root anchor — dist/feed/ and dist/packages/ are generated, not committed
 dist/*
 !dist/.gitkeep
 !dist/caddy/
-dist/caddy/*
-!dist/caddy/.gitkeep
+
+# Local signing key output (private keys) — move to T:/netops/ immediately
+keys/

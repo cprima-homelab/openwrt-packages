@@ -1,11 +1,14 @@
+name: openwrt-packages
+
 services:
-  openwrt-test:
-    build: ./tests/openwrt
+  test:
+    build: .
     volumes:
-      - ./dist:/harness/dist:ro
+      - ../../dist/feed:/harness/feed:ro
       - openwrt-image-cache:/cache
     environment:
       OPENWRT_VERSION: "25.12.5"
+      OPENWRT_RELEASE: "25.12"
       EXPECTED_PACKAGES: "caddy salt-agent-ubus"
 
 volumes:

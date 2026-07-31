@@ -1,9 +1,26 @@
-FROM caddy:2.10.2-builder
+ARG GO_VERSION=1.26.5
+ARG UV_VERSION=0.4.30
+ARG XCADDY_VERSION=v0.4.2
 
-ENV GOOS=linux
-ENV CGO_ENABLED=0
+# Named stage so --from can reference it without variable expansion.
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv-bin
 
-COPY build.sh /usr/local/bin/build.sh
-RUN chmod +x /usr/local/bin/build.sh
+FROM golang:${GO_VERSION}-bookworm
 
-CMD ["/usr/local/bin/build.sh"]
+ARG XCADDY_VERSION
+
+COPY --from=uv-bin /uv /usr/local/bin/uv
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git ca-certificates file && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN go install github.com/caddyserver/xcaddy/cmd/xcaddy@${XCADDY_VERSION}
+
+# Expose for build.py provenance recording
+ENV XCADDY_VERSION=${XCADDY_VERSION}
+
+WORKDIR /build
+COPY matrix.yaml build.py ./
+
+CMD ["uv", "run", "build.py"]

@@ -2,9 +2,11 @@
 set -euo pipefail
 
 : "${EXPECTED_PACKAGES:?EXPECTED_PACKAGES is required}"
+: "${OPENWRT_RELEASE:?OPENWRT_RELEASE is required}"
 
 SSH_PORT=2222
-REPO_URL="http://10.0.2.2:8080/packages.adb"
+# 10.0.2.2 is QEMU's default gateway — reaches the host HTTP server inside the container.
+REPO_URL="http://10.0.2.2:8080/${OPENWRT_RELEASE}/x86_64/packages.adb"
 
 ssh_vm() {
     sshpass -p "" ssh \

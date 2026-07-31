@@ -3,7 +3,10 @@ services:
     build:
       context: .
     volumes:
-      - ../../dist/caddy:/out
-    environment:
-      CADDY_VERSION: "v2.10.2"
-      OPENWRT_ARCH: "x86_64"
+      - ../../dist/caddy:/dist
+      - caddy-gomodcache:/go/pkg/mod
+      - caddy-gobuildcache:/root/.cache/go-build
+
+volumes:
+  caddy-gomodcache:
+  caddy-gobuildcache:

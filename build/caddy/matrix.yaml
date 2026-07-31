@@ -1,0 +1,59 @@
+# build/caddy/ is a gap-filler for architectures NOT covered by official Caddy
+# upstream releases (github.com/caddyserver/caddy/releases).
+#
+# Upstream Caddy v2.10.2 covers: amd64, arm64, armv5, armv6, armv7, riscv64,
+# s390x, ppc64le. Do not rebuild those here — use the upstream binary directly.
+#
+# Plugin versions are pinned per Caddy version. Constraints discovered from build:
+#   caddy-dynamicdns v0.0.0-20260711... requires caddy >= 2.10.0 → excluded from 2.9.x
+#   caddy-geoblock v0.1.1 requires caddy >= 2.10.2 → excluded from 2.9.x and 2.10.0
+#   caddy-l4: v0.1.0+ requires caddy >= 2.11.4; v0.1.2 requires >= 2.11.4
+#     2.9.1/2.10.0: last commit with go.mod caddy req v2.8.4 = 7a13b24ee293 (2025-08-07)
+#     2.10.2: first commit with caddy req v2.10.1 = d6199b698240 (2025-08-22)
+#   caddy-dns/cloudflare resolved to v0.2.4 (2.10.x builds)
+#   caddy-dns/inwx resolved to v0.4.1 (2.10.x builds)
+caddy:
+  versions:
+    "2.9.1":
+      plugins:
+        - "github.com/caddy-dns/cloudflare"            # pin after first successful build
+        - "github.com/caddy-dns/inwx"                  # pin after first successful build
+        - "github.com/mholt/caddy-l4@v0.0.0-20250807231303-7a13b24ee293"
+        # caddy-dynamicdns excluded: requires caddy >= 2.10.0
+        # caddy-geoblock excluded: v0.1.1 requires caddy >= 2.10.2
+    "2.10.0":
+      plugins:
+        - "github.com/caddy-dns/cloudflare@v0.2.4"
+        - "github.com/caddy-dns/inwx@v0.4.1"
+        - "github.com/mholt/caddy-dynamicdns@v0.0.0-20260711161133-a5890c9df68c"
+        - "github.com/mholt/caddy-l4@v0.0.0-20250807231303-7a13b24ee293"
+        # caddy-geoblock excluded: v0.1.1 requires caddy >= 2.10.2
+    "2.10.2":
+      plugins:
+        - "github.com/caddy-dns/cloudflare@v0.2.4"
+        - "github.com/caddy-dns/inwx@v0.4.1"
+        - "github.com/mholt/caddy-dynamicdns@v0.0.0-20260711161133-a5890c9df68c"
+        - "github.com/mholt/caddy-l4@v0.0.0-20250822202841-d6199b698240"
+        - "github.com/anujc4/caddy-geoblock@v0.1.1"
+
+# Gap-fill targets only. Upstream Caddy does not publish these.
+# powerpc_464fp and powerpc_8548 are 32-bit PPC — Go has no linux/ppc target,
+# so they are excluded entirely.
+# powerpc64_e5500 is big-endian PPC64 (linux/ppc64); upstream only provides
+# ppc64le. Include once verified buildable and installable on the target.
+targets:
+  - goos: linux
+    goarch: "386"           # i386_pentium-mmx, i386_pentium4
+  - goos: linux
+    goarch: mips            # mips_24kc, mips_mips32 (hardfloat)
+  - goos: linux
+    goarch: mips
+    gomips: softfloat       # mips_mips32 softfloat variant
+  - goos: linux
+    goarch: mipsle          # mipsel_24kc, mipsel_74kc, mipsel_mips32
+  - goos: linux
+    goarch: mips64          # mips64_mips64r2, mips64_octeonplus
+  - goos: linux
+    goarch: mips64le        # mips64el_mips64r2
+  - goos: linux
+    goarch: loong64         # loongarch64_generic

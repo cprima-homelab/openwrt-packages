@@ -1,4 +1,4 @@
 services:
-  openwrt-test:
+  test:
     devices:
       - /dev/kvm:/dev/kvm

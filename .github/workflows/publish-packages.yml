@@ -1,0 +1,81 @@
+name: Build and publish packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'scripts/**'
+      - '.github/workflows/publish-packages.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-packages
+  cancel-in-progress: false
+
+env:
+  OPENWRT_RELEASE: "25.12"
+  OPENWRT_RELEASE_FULL: "25.12.5"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build all-arch packages
+        run: docker compose -f build/openwrt/compose.yaml run --rm build
+
+      - name: Cache SDK host tools
+        id: cache-sdk-tools
+        uses: actions/cache@v4
+        with:
+          path: sdk-tools/
+          key: sdk-tools-${{ env.OPENWRT_RELEASE_FULL }}-x86_64-v1
+
+      - name: Download SDK host tools
+        if: steps.cache-sdk-tools.outputs.cache-hit != 'true'
+        run: |
+          BASE="https://downloads.openwrt.org/releases/${{ env.OPENWRT_RELEASE_FULL }}/targets/x86/64"
+          wget -q "$BASE/sha256sums" -O sha256sums
+          SDK_FILE=$(grep 'sdk-.*Linux-x86_64.tar' sha256sums | cut -d'*' -f2)
+          wget -q "$BASE/$SDK_FILE"
+          mkdir -p sdk-tools
+          tar xf "$SDK_FILE" --strip=1 --no-same-owner -C sdk-tools \
+            ./host/bin/apk \
+            ./host/bin/.apk.bin \
+            ./host/lib/
+
+      - name: Materialise signing key
+        run: |
+          if [ -n "$APK_SIGN_KEY" ]; then
+            echo "$APK_SIGN_KEY" > "$RUNNER_TEMP/apk.key"
+            chmod 077 "$RUNNER_TEMP/apk.key"
+            echo "APK_SIGN_KEY_PATH=$RUNNER_TEMP/apk.key" >> "$GITHUB_ENV"
+          fi
+        env:
+          APK_SIGN_KEY: ${{ secrets.APK_SIGN_KEY }}
+
+      - name: Sync APKs into feed
+        run: bash scripts/sync-apks.sh dist/packages/ dist/feed/${{ env.OPENWRT_RELEASE }}/
+
+      - name: Build feed index
+        run: |
+          APK_BIN="$PWD/sdk-tools/host/bin/apk" \
+          APK_SIGN_KEY="${APK_SIGN_KEY_PATH:-}" \
+          bash scripts/build-feed-index.sh dist/feed/${{ env.OPENWRT_RELEASE }}/
+
+      - name: Stage public key at feed root
+        run: cp cprima-homelab-openwrt-packages.pem dist/feed/
+
+      - name: Deploy feed to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist/feed
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "feed: update packages"
