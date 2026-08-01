@@ -22,7 +22,11 @@ echo "==> Validating repository..."
 ./validate.sh
 
 echo "==> Starting HTTP server..."
-./serve.sh
+if [[ -z "${FEED_BASE_URL:-}" ]]; then
+    ./serve.sh
+else
+    echo "    FEED_BASE_URL set — skipping local serve"
+fi
 
 echo "==> Booting OpenWrt ${OPENWRT_VERSION}..."
 ./boot.sh

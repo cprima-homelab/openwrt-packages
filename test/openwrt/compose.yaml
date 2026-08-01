@@ -10,6 +10,7 @@ services:
       OPENWRT_VERSION: "25.12.5"
       OPENWRT_RELEASE: "25.12"
       EXPECTED_PACKAGES: "caddy salt-agent-ubus"
+      FEED_BASE_URL: ${FEED_BASE_URL:-}
 
 volumes:
   openwrt-image-cache:

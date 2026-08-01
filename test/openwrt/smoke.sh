@@ -5,8 +5,11 @@ set -euo pipefail
 : "${OPENWRT_RELEASE:?OPENWRT_RELEASE is required}"
 
 SSH_PORT=2222
-# 10.0.2.2 is QEMU's default gateway — reaches the host HTTP server inside the container.
-REPO_URL="http://10.0.2.2:8080/${OPENWRT_RELEASE}/x86_64/packages.adb"
+# FEED_BASE_URL selects the feed source:
+#   unset → local HTTP server at 10.0.2.2:8080 (QEMU default gateway)
+#   set   → GitHub Release flat asset URL (e.g. .../releases/download/feed-25.12.5-x86_64)
+BASE_URL="${FEED_BASE_URL:-http://10.0.2.2:8080/${OPENWRT_RELEASE}/x86_64}"
+REPO_URL="${BASE_URL}/packages.adb"
 
 ssh_vm() {
     sshpass -p "" ssh \

@@ -1,0 +1,78 @@
+name: Publish Feed
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "OpenWrt major.minor (e.g. 25.12)"
+        required: true
+        type: choice
+        options: ["24.10", "25.12"]
+      release_full:
+        description: "OpenWrt point release (e.g. 25.12.5)"
+        required: true
+        type: string
+      arch:
+        description: "Target architecture (e.g. x86_64)"
+        required: true
+        type: string
+      extra_arches:
+        description: "Additional arches to receive _all packages (space-separated)"
+        required: false
+        type: string
+        default: ""
+      tag:
+        description: "Release tag override (default: feed-<release_full>-<arch>)"
+        required: false
+        type: string
+        default: ""
+
+  push:
+    tags:
+      - "feed-*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/setup-just@v3
+
+      - name: Package feed
+        env:
+          APK_SIGN_KEY: ${{ secrets.APK_SIGN_KEY }}
+          IPK_SIGN_KEY: ${{ secrets.IPK_SIGN_KEY }}
+        run: |
+          just package-feed \
+            release="${{ inputs.release }}" \
+            release_full="${{ inputs.release_full }}" \
+            extra_arches="${{ inputs.extra_arches }}"
+
+      - name: Validate
+        run: just validate
+
+      - name: Local QEMU test
+        run: just test
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ inputs.tag }}"
+          [[ -z "$TAG" ]] && TAG="feed-${{ inputs.release_full }}-${{ inputs.arch }}"
+          just publish-release \
+            release="${{ inputs.release }}" \
+            release_full="${{ inputs.release_full }}" \
+            arch="${{ inputs.arch }}" \
+            tag="$TAG"
+          echo "FEED_TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Test published feed
+        run: |
+          FEED_BASE_URL="https://github.com/${{ github.repository }}/releases/download/${FEED_TAG}"
+          just test feed_base_url="$FEED_BASE_URL"

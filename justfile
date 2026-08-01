@@ -11,9 +11,35 @@ build-packages release="25.12" release_full="25.12.5":
     New-Item -ItemType Directory -Force -Path "dist/packages/{{release}}" | Out-Null
     $env:OPENWRT_RELEASE = "{{release}}"; $env:OPENWRT_RELEASE_FULL = "{{release_full}}"; docker compose -f build/openwrt/compose.yaml run --rm build
 
-# Run the full test suite (validate + QEMU smoke test)
-test:
-    docker compose -f test/openwrt/compose.yaml run --rm test
+# Build packages, sync, and index into dist/feed/ in one step.
+# CI calls this; developers can call individual steps or this combined recipe.
+package-feed release="25.12" release_full="25.12.5" extra_arches="":
+    just build-packages release={{release}} release_full={{release_full}}
+    just sync-feed release={{release}} extra_arches="{{extra_arches}}"
+    just index-feed release={{release}}
+
+# Run the full test suite (validate + QEMU smoke test).
+# feed_base_url: if set, skips local HTTP server and tests against that URL instead.
+#   Local:  (unset) → serves dist/feed/ on 10.0.2.2:8080
+#   CI:     feed_base_url="https://github.com/.../releases/download/feed-25.12.5-x86_64"
+test feed_base_url="":
+    $env:FEED_BASE_URL = "{{feed_base_url}}"; docker compose -f test/openwrt/compose.yaml run --rm test
+
+# Publish dist/feed/<release>/<arch>/ as a GitHub Release (flat asset namespace).
+# Tag defaults to feed-<release_full>-<arch>; append -r2 etc. for re-publishes.
+# Requires GH_TOKEN or gh auth login. Safe to re-run: skips create if tag exists.
+publish-release release="25.12" release_full="25.12.5" arch="x86_64" tag="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    TAG="{{tag}}"
+    [[ -z "$TAG" ]] && TAG="feed-{{release_full}}-{{arch}}"
+    gh release view "$TAG" >/dev/null 2>&1 || \
+        gh release create "$TAG" --title "$TAG" --notes-file RELEASE.md
+    gh release upload "$TAG" "dist/feed/{{release}}/{{arch}}"/* --clobber
+
+# Placeholder for future GitHub Pages documentation publishing (not the feed).
+publish-pages:
+    @echo "Pages publishing not yet implemented"
 
 # Run static validation only (no QEMU)
 validate:
