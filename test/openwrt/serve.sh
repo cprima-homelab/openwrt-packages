@@ -1,22 +1,33 @@
 #!/bin/bash
 set -euo pipefail
 
-: "${OPENWRT_RELEASE:?OPENWRT_RELEASE is required}"
+source "$(dirname "$0")/lib.sh"
 
-PORT=8080
+: "${OPENWRT_RELEASE:?OPENWRT_RELEASE is required}"
+: "${OPENWRT_ARCH:?OPENWRT_ARCH is required}"
+
+PORT="${FEED_PORT:-8080}"
+ARCH="${OPENWRT_ARCH}"
 FEED=/harness/feed
-ARCH_INDEX="${OPENWRT_RELEASE}/x86_64/packages.adb"
+PACKAGE_FORMAT="$(derive_package_format)"
+
+case "$PACKAGE_FORMAT" in
+  apk) ARCH_INDEX="${OPENWRT_RELEASE}/${ARCH}/packages.adb" ;;
+  ipk) ARCH_INDEX="${OPENWRT_RELEASE}/${ARCH}/Packages.gz" ;;
+esac
 
 python3 -m http.server "$PORT" --directory "$FEED" \
-    > /tmp/serve.log 2>&1 &
+    > /tmp/feed-stable.log 2>&1 &
 echo $! > /tmp/serve.pid
 
-sleep 1
+for i in $(seq 1 5); do
+    if curl -fsS "http://127.0.0.1:${PORT}/${ARCH_INDEX}" >/dev/null 2>&1; then
+        log "stage=feed-server status=ready port=${PORT} index=${ARCH_INDEX}"
+        exit 0
+    fi
+    sleep 1
+done
 
-if ! curl -fsS "http://127.0.0.1:${PORT}/${ARCH_INDEX}" > /dev/null; then
-    echo "FAIL: HTTP server not serving ${ARCH_INDEX} on port ${PORT}" >&2
-    cat /tmp/serve.log >&2
-    exit 1
-fi
-
-echo "HTTP server ready on :${PORT} serving ${FEED}"
+log "stage=feed-server status=fail port=${PORT}"
+cat /tmp/feed-stable.log >&2
+exit 1

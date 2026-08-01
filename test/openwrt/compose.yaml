@@ -7,10 +7,19 @@ services:
       - ../../dist/feed:/harness/feed:ro
       - openwrt-image-cache:/cache
     environment:
-      OPENWRT_VERSION: "25.12.5"
-      OPENWRT_RELEASE: "25.12"
-      EXPECTED_PACKAGES: "caddy salt-agent-ubus"
-      FEED_BASE_URL: ${FEED_BASE_URL:-}
+      OPENWRT_VERSION:  "25.12.5"
+      OPENWRT_RELEASE:  "25.12"
+      OPENWRT_ARCH:     "x86_64"
+      INSTALL_PACKAGES: "caddy salt-agent-ubus"
+      VERIFY_COMMANDS: |
+        caddy version
+        salt-agent-ubus --version
+      FEED_URLS:  ${FEED_URLS:-}
+      SSH_HOST:   ${SSH_HOST:-127.0.0.1}
+      SSH_PORT:   ${SSH_PORT:-2222}
+      SSH_USER:   ${SSH_USER:-root}
+      FEED_HOST:  ${FEED_HOST:-10.0.2.2}
+      FEED_PORT:  ${FEED_PORT:-8080}
 
 volumes:
   openwrt-image-cache:

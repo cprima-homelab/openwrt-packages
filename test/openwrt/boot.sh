@@ -4,7 +4,7 @@ set -euo pipefail
 : "${OPENWRT_VERSION:?OPENWRT_VERSION is required}"
 
 CACHE_DIR="${CACHE_DIR:-/cache}"
-SSH_PORT=2222
+SSH_PORT="${SSH_PORT:-2222}"
 IMG_NAME="openwrt-${OPENWRT_VERSION}-x86-64"
 CACHED_IMG="${CACHE_DIR}/${IMG_NAME}.img"
 IMAGE_URL="https://downloads.openwrt.org/releases/${OPENWRT_VERSION}/targets/x86/64/openwrt-${OPENWRT_VERSION}-x86-64-generic-ext4-combined.img.gz"

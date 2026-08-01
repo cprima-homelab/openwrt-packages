@@ -74,5 +74,19 @@ jobs:
 
       - name: Test published feed
         run: |
-          FEED_BASE_URL="https://github.com/${{ github.repository }}/releases/download/${FEED_TAG}"
-          just test feed_base_url="$FEED_BASE_URL"
+          FEED_URLS="https://github.com/${{ github.repository }}/releases/download/${FEED_TAG}"
+          just test feed_urls="$FEED_URLS"
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ env.FEED_TAG || 'local' }}
+          path: |
+            /tmp/qemu.log
+            /tmp/feed-stable.log
+            /tmp/feed-overlay.log
+            /tmp/package-install.log
+            /tmp/resolved-config.env
+          retention-days: 7
+          if-no-files-found: ignore

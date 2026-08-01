@@ -19,11 +19,12 @@ package-feed release="25.12" release_full="25.12.5" extra_arches="":
     just index-feed release={{release}}
 
 # Run the full test suite (validate + QEMU smoke test).
-# feed_base_url: if set, skips local HTTP server and tests against that URL instead.
-#   Local:  (unset) → serves dist/feed/ on 10.0.2.2:8080
-#   CI:     feed_base_url="https://github.com/.../releases/download/feed-25.12.5-x86_64"
-test feed_base_url="":
-    $env:FEED_BASE_URL = "{{feed_base_url}}"; docker compose -f test/openwrt/compose.yaml run --rm test
+# feed_urls: newline-separated list of base directory URLs, highest priority first.
+#   Local (default): smoke.sh derives from FEED_HOST:FEED_PORT
+#   Local + overlay: "http://10.0.2.2:8081/25.12/x86_64\nhttp://10.0.2.2:8080/25.12/x86_64"
+#   Published feed:  "https://github.com/.../releases/download/feed-25.12.5-x86_64"
+test feed_urls="":
+    $env:FEED_URLS = "{{feed_urls}}"; docker compose -f test/openwrt/compose.yaml run --rm test
 
 # Publish dist/feed/<release>/<arch>/ as a GitHub Release (flat asset namespace).
 # Tag defaults to feed-<release_full>-<arch>; append -r2 etc. for re-publishes.
@@ -40,6 +41,17 @@ publish-release release="25.12" release_full="25.12.5" arch="x86_64" tag="":
 # Placeholder for future GitHub Pages documentation publishing (not the feed).
 publish-pages:
     @echo "Pages publishing not yet implemented"
+
+# Build and index an overlay feed (local-only, never published).
+# Contains only packages from current source; dist/feed/ is untouched.
+package-overlay-feed release="25.12" release_full="25.12.5" extra_arches="":
+    just build-packages release={{release}} release_full={{release_full}}
+    bash scripts/sync-apks.sh dist/packages/{{release}}/ dist/feed-overlay/{{release}}/ {{extra_arches}}
+    $env:OPENWRT_RELEASE = "{{release}}"; $env:FEED_DIR = "../../dist/feed-overlay"; docker compose -f build/openwrt/compose.yaml run --rm index
+
+# Serve the overlay feed on a separate port (run alongside serve-feed)
+serve-overlay port="8081":
+    python -m http.server {{port}} --directory dist/feed-overlay/
 
 # Run static validation only (no QEMU)
 validate:
