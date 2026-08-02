@@ -1,0 +1,27 @@
+---
+# Baseline hooks shared across cprima-homelab repos regardless of primary
+# language. Language-specific lint/format hooks are added per-repo on top
+# of this (see the org's pre-commit rollout notes).
+#
+# One-time local setup after cloning:
+#   pip install pre-commit  (or: uv tool install pre-commit)
+#   pre-commit install --hook-type pre-commit --hook-type commit-msg
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: strip-coauthored-by
+        name: Strip Co-Authored-By trailers from commit messages
+        description: Org policy is no AI authorship attribution in commits.
+        entry: bash .githooks/strip-coauthored-by.sh
+        language: system
+        stages: [commit-msg]
